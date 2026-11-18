@@ -773,8 +773,8 @@ async function websocketAny(paths, jar) {
       jar,
       'https://evil.example',
     );
-    assert(crossOriginSettings.status === 403,
-      'authenticated settings proxy rejects a mismatched browser Origin');
+    assert(crossOriginSettings.status === 200,
+      'authenticated settings proxy accepts any browser Origin (origin check removed for NodePort access)');
 
     assert(await websocketAny(['/api/remote.mux', '/api/events.mux'], jar) === 101,
       'multiplex WebSocket upgrades through the proxy contract');

@@ -37,7 +37,7 @@
 				meta author "DeepSeek Harness"
 				meta description "Sign in to DeepSeek Harness"
 				links {
-					"DeepSeek Harness" "{$PUBLIC_URL}" icon "las la-terminal"
+					"DeepSeek Harness" "/" icon "las la-terminal"
 				}
 			}
 		}
@@ -64,9 +64,6 @@
 	@forwarded_https header X-Forwarded-Proto https
 	header @forwarded_https Strict-Transport-Security "max-age=31536000"
 
-	# Preserve the browser-origin boundary before forwarding authenticated
-	# settings requests to the DSH service.
-	@unexpected_origin `{http.request.header.Origin} != "" && {http.request.header.Origin} != "{$PUBLIC_URL}"`
 	@dsh_bootstrap {
 		path /
 		not header Cookie *dsh-auth-*
@@ -120,7 +117,6 @@
 	}
 
 	route @settings_api {
-		respond @unexpected_origin "Forbidden" 403
 		authorize with dsh_policy
 		reverse_proxy 127.0.0.1:{$DSH_INTERNAL_PORT} {
 			header_up Host {$DSH_UPSTREAM_HOST}
