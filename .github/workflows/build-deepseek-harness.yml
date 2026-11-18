@@ -54,5 +54,5 @@ jobs:
       publish: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
       refresh_system_packages: ${{ inputs.refresh_system_packages }}
     secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKER_PASSWORD }}
