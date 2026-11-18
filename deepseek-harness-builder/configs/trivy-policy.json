@@ -16,6 +16,20 @@
   ],
   "exceptions": [
     {
+      "id": "CVE-2026-112366",
+      "package": "picomatch",
+      "installed_version": "4.0.7",
+      "path": "opt/dsh/node_modules/picomatch/package.json",
+      "type": "node-pkg",
+      "profiles": [
+        "runtime",
+        "workstation"
+      ],
+      "reason": "picomatch ReDoS with no fixed release; pulled transitively by upstream dsh packages. Matches the npm audit allowlist for GHSA-fc5q-39xc-vjpf.",
+      "reference": "https://github.com/advisories/GHSA-fc5q-39xc-vjpf",
+      "expires": "2026-12-31"
+    },
+    {
       "id": "CVE-2026-41567",
       "package": "github.com/docker/docker",
       "installed_version": "v28.5.2+incompatible",
