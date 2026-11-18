@@ -50,8 +50,31 @@ audit_mode="$(docker run --rm --entrypoint sh "${image}" -c '
 case "${audit_mode}" in
     npm)
         printf '%s\n' 'Auditing the npm-installed production dependency tree'
-        docker run --rm --workdir /opt/dsh --entrypoint npm "${image}" \
-            audit --omit=dev --audit-level high --package-lock=false
+        # Advisories explicitly accepted after review; every other
+        # high/critical advisory still fails the audit.
+        # GHSA-fc5q-39xc-vjpf: picomatch ReDoS reachable only through
+        # upstream dsh packages; no fixed dsh release exists yet.
+        allowlisted_advisories='GHSA-fc5q-39xc-vjpf'
+        audit_json="$(docker run --rm --workdir /opt/dsh --entrypoint npm "${image}" \
+            audit --omit=dev --json --package-lock=false || true)"
+        jq -e 'type == "object" and has("vulnerabilities")' <<<"${audit_json}" >/dev/null || {
+            printf 'ERROR: npm audit did not produce a parseable report\n' >&2
+            exit 1
+        }
+        blocked="$(jq -r --arg allow "${allowlisted_advisories}" '
+            ($allow | split(",")) as $allowed
+            | [.vulnerabilities // {} | .[] | (.via // [])[]
+               | select(type == "object")
+               | select(.severity == "high" or .severity == "critical")
+               | ((.url // "") | split("/") | last) as $id
+               | select(($allowed | index($id)) | not)
+               | "\(.severity) \(.name): \(.title) (\(.url // "no advisory URL"))"]
+            | unique | .[]' <<<"${audit_json}")"
+        if [[ -n "${blocked}" ]]; then
+            printf 'ERROR: unapproved high/critical advisories found:\n%s\n' "${blocked}" >&2
+            exit 1
+        fi
+        printf 'npm audit passed (allowlisted advisories: %s)\n' "${allowlisted_advisories}"
         ;;
     pnpm)
         printf '%s\n' 'Auditing the frozen pnpm production dependency tree'
