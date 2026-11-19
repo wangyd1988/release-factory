@@ -714,6 +714,18 @@ async function websocketAny(paths, jar) {
 
   const jar = await login();
 
+  {
+    const staleJar = new CookieJar();
+    staleJar.cookies.set('DSH_ACCESS_TOKEN', jar.cookies.get('DSH_ACCESS_TOKEN'));
+    staleJar.cookies.set('dsh-auth-stale-session', 'invalid');
+    let stale = await request('/', {}, staleJar);
+    assert(stale.status === 303 && stale.headers.location === '/.dsh-session',
+      'a stale DSH session cookie on the index redirects to session refresh');
+    stale = await followToPage(stale, staleJar);
+    assert(stale.status === 200,
+      'session refresh re-mints the DSH session and loads the index');
+  }
+
   if (profile === 'full') {
     const deployment = await request('/dsh-deployment.js', {}, jar);
     assert(deployment.status === 200,

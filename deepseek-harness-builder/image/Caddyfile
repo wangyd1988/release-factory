@@ -68,6 +68,12 @@
 		path /
 		not header Cookie *dsh-auth-*
 	}
+	# A leftover dsh-auth-* cookie (another port on the same host, a previous
+	# deployment, or a rotated signing secret) suppresses the bootstrap above
+	# and DSH answers the index with 401. Redirect that index request once to
+	# /.dsh-session, which re-mints the DSH session from the launch token.
+	@dsh_session_refresh path /.dsh-session
+	@dsh_stale_index expression `{http.request.method} == "GET" && {http.request.orig_uri.path} == "/"`
 	@native_settings_api path /api/settings.openDocument /api/settings/openSettingsDocument
 	@settings_api path /api/settings.describe /api/settings.update /api/settings.replace /api/settings.mutate /api/credentials.describe /api/credentials.set /api/credentials.unset /api/llm.discoverModels /api/settings/describe /api/settings/update /api/settings/replace /api/settings/mutate /api/credentials/describe /api/credentials/set /api/credentials/unset /api/llm/discoverModels
 
@@ -137,6 +143,7 @@
 	route {
 		authorize with dsh_policy
 		rewrite @dsh_bootstrap /?token={$DSH_LAUNCH_TOKEN}
+		rewrite @dsh_session_refresh /?token={$DSH_LAUNCH_TOKEN}
 		reverse_proxy 127.0.0.1:{$DSH_INTERNAL_PORT} {
 			header_up -Authorization
 			header_up -Remote-User
@@ -148,6 +155,16 @@
 			header_up -X-Remote-User
 			header_up -X-User
 			header_up -X-Webauth-User
+
+			@dsh_unauthorized status 401
+			handle_response @dsh_unauthorized {
+				route {
+					header Cache-Control "no-store"
+					redir @dsh_stale_index /.dsh-session 303
+					copy_response_headers
+					copy_response
+				}
+			}
 		}
 	}
 }
